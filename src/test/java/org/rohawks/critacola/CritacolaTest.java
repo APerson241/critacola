@@ -27,13 +27,9 @@ public class CritacolaTest extends TestCase {
     }
 
     /**
-     * Rigourous Test :-)
+     * Rigorous Test :-)
      */
     public void testApp() {
         assertTrue( true );
-    }
-    
-    public void testCritacola() {
-    	assertEquals( ( new Critacola() ).add( 2, 2 ), 4 );
     }
 }

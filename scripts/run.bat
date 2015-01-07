@@ -1,0 +1,1 @@
+@start java -jar target/critacola-1.0-SNAPSHOT.jar

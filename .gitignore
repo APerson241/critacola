@@ -57,10 +57,13 @@ $RECYCLE.BIN/
 *.msm
 *.msp
 
-#JEdit cache
+# JEdit cache
 *.*~
 
-#Stuff for Maven
+# Vim detritus
+*.swp
+
+# Stuff for Maven
 target/
 pom.xml.tag
 pom.xml.releaseBackup
