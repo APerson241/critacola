@@ -3,6 +3,7 @@ package org.rohawks.critacola.ui;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.*;
+import java.util.List;
 
 import javax.swing.*;
 
@@ -14,13 +15,20 @@ import org.rohawks.critacola.util.*;
  * The form for entering a match.
  */
 public class EnterMatchView extends CritView {
-    private enum FormStatus { READY, R1, R2, R3, B1, B2, B3 };
-    private FormStatus formStatus = FormStatus.READY;
+    private enum TeamPosition { NONE, R1, R2, R3, B1, B2, B3 }
+    private TeamPosition selectedPosition = TeamPosition.NONE;
 
-    private JButton submitButton;
-    private JTextField competitionName;
+    private static final EnumSet<TeamPosition> redPositions =
+            EnumSet.of( TeamPosition.R1, TeamPosition.R2, TeamPosition.R3 );
+    private static final EnumSet<TeamPosition> bluePositions =
+            EnumSet.complementOf( redPositions );
+
+    private boolean enteringMatchRecord = false;
+
+    private JTextField matchNameField;
     private ButtonGroup whoWonGroup;
-    private JCheckBox coopertitionAchieved;
+    private JCheckBox coopertitionAchievedBox;
+    private JButton submitButton;
 
     private TeamPanel r1Panel;
     private TeamPanel r2Panel;
@@ -29,27 +37,15 @@ public class EnterMatchView extends CritView {
     private TeamPanel b2Panel;
     private TeamPanel b3Panel;
 
-    private MatchRecord r1;
-    private MatchRecord r2;
-    private MatchRecord r3;
-    private MatchRecord b1;
-    private MatchRecord b2;
-    private MatchRecord b3;
+    private List<TeamPanel> teamPanels;
 
-    private JTextField teamField;
-    private JSlider pickupSlider;
-    private JSlider driveTrainSlider;
-    private JSlider driverSlider;
-    private JTextArea commentsArea;
-    private JButton submitMatchRecordButton;
+    private Map<TeamPosition, MatchRecord> matchRecords;
 
-    private static final Color RED_ENTERED = new Color( 255, 75, 75 );
-    private static final Color RED_NONENTERED = Color.RED;
-    private static final Color BLUE_ENTERED = new Color( 75, 75, 255 );
-    private static final Color BLUE_NONENTERED = Color.BLUE;
+    private EnterMatchRecordPanel emrPanel;
 
     public EnterMatchView( CritController controller ) {
         super( controller );
+        matchRecords = new HashMap<TeamPosition, MatchRecord>();
     }
 
     @Override
@@ -59,11 +55,20 @@ public class EnterMatchView extends CritView {
 
     @Override
     public void refresh() {
-        if( formStatus == FormStatus.READY ) {
-            submitButton.setEnabled( competitionName.getText().length() > 0 );
-        } else {
-            submitButton.setEnabled( false );
+        boolean winnerSelected = whoWonGroup.getSelection() != null;
+        submitButton.setEnabled( !enteringMatchRecord &&
+                                 winnerSelected &&
+                                 matchRecords.size() == 6 );
+        for( TeamPanel p : teamPanels ) {
+            p.refresh();
         }
+        submitButton.setText( "Save Match" +
+                              ( ( matchRecords.size() != 6 ) ?
+                                ( " (" + matchRecords.size() +
+                                  " out of 6 teams entered)" ) :
+                                "" ) );
+        emrPanel.setMatch( matchNameField.getText() );
+        emrPanel.refresh();
     }
 
     @Override
@@ -76,89 +81,60 @@ public class EnterMatchView extends CritView {
         panel = new JPanel( new BorderLayout() );
 
         JPanel competitionPanel = new JPanel( new GridLayout( 1, 3, 5, 5 ) );
-        JPanel competitionNamePanel = new JPanel(
-                new GridLayout( 2, 1, 5, 5 ) );
-        competitionNamePanel.add( new JLabel( "Competition Name" ) );
-        competitionName = new JTextField( 20 );
-        competitionName.addKeyListener(
-                controller.getRefreshOnKeystrokeListener() );
-        competitionNamePanel.add( competitionName );
-        competitionPanel.add( competitionNamePanel );
+        competitionPanel.setBorder(
+                BorderFactory.createTitledBorder( "Metadata" ) );
+        JPanel namePanel = new JPanel( new GridLayout( 2, 1, 5, 5 ) );
+        namePanel.add( new JLabel( "Match name" ) );
+        matchNameField = new JTextField( 20 );
+        matchNameField
+            .addKeyListener( controller.getRefreshOnKeystrokeListener() );
+        namePanel.add( matchNameField );
+        competitionPanel.add( namePanel );
         JPanel whoWonPanel = new JPanel( new GridLayout( 3, 1, 5, 5 ) );
         whoWonPanel.add( new JLabel( "Who won?" ) );
         whoWonGroup = new ButtonGroup();
         JRadioButton redAllianceWon = new JRadioButton( "Red alliance" );
         redAllianceWon.setActionCommand( "Red alliance" );
+        redAllianceWon.addActionListener(
+                controller.getRefreshActionListener() );
         whoWonGroup.add( redAllianceWon );
         whoWonPanel.add( redAllianceWon );
         JRadioButton blueAllianceWon = new JRadioButton( "Blue alliance" );
         blueAllianceWon.setActionCommand( "Blue alliance" );
+        blueAllianceWon.addActionListener(
+                controller.getRefreshActionListener() );
         whoWonGroup.add( blueAllianceWon );
         whoWonPanel.add( blueAllianceWon );
         competitionPanel.add( whoWonPanel );
-        coopertitionAchieved = new JCheckBox( "Coopertition bonus achieved?" );
-        competitionPanel.add( coopertitionAchieved );
+        coopertitionAchievedBox = new JCheckBox(
+                "Coopertition bonus achieved?" );
+        competitionPanel.add( coopertitionAchievedBox );
         panel.add( competitionPanel, BorderLayout.NORTH );
 
         JPanel middlePanel = new JPanel( new GridLayout( 2, 1 ) );
 
         JPanel teamsPanel = new JPanel( new GridLayout( 2, 3 ) );
-        r1Panel = new TeamPanel( AllianceColor.RED );
-        teamsPanel.add( r1Panel.getPanel() );
-        r2Panel = new TeamPanel( AllianceColor.RED );
-        teamsPanel.add( r2Panel.getPanel() );
-        r3Panel = new TeamPanel( AllianceColor.RED );
-        teamsPanel.add( r3Panel.getPanel() );
-        b1Panel = new TeamPanel( AllianceColor.BLUE );
-        teamsPanel.add( b1Panel.getPanel() );
-        b2Panel = new TeamPanel( AllianceColor.BLUE );
-        teamsPanel.add( b2Panel.getPanel() );
-        b3Panel = new TeamPanel( AllianceColor.BLUE );
-        teamsPanel.add( b3Panel.getPanel() );
+        teamPanels = new ArrayList<TeamPanel>();
+        selectedPosition = TeamPosition.NONE;
+        for( TeamPosition pos : TeamPosition.values() ) {
+            if( pos == TeamPosition.NONE ) {
+                continue;
+            }
+
+            TeamPanel tPanel = new TeamPanel( pos );
+            teamPanels.add( tPanel );
+            teamsPanel.add( tPanel.getPanel() );
+        }
         middlePanel.add( teamsPanel );
 
-        JPanel matchRecordPanel = new JPanel( new GridLayout( 1, 3 ) );
-        JPanel teamInfoPanel = new JPanel();
-        teamInfoPanel.setLayout( new BoxLayout(
-                teamInfoPanel, BoxLayout.Y_AXIS ) );
-        teamInfoPanel.add( new JLabel( "Team #" ) );
-        teamField = new JTextField( 5 );
-        Helper.setComponentFontSize( teamField, 22 );
-        teamInfoPanel.add( teamField );
-        matchRecordPanel.add( teamInfoPanel );
-        JPanel ratingsPanel = new JPanel( new GridLayout( 3, 2 ) );
-        ratingsPanel.setBorder( BorderFactory.createTitledBorder( "Ratings" ) );
-        ratingsPanel.add( new JLabel( "Pickup" ) );
-        pickupSlider = new JSlider( 1, 5, 3 );
-        pickupSlider.setMajorTickSpacing( 1 );
-        pickupSlider.setPaintTicks( true );
-        ratingsPanel.add( pickupSlider );
-        ratingsPanel.add( new JLabel( "Drivetrain" ) );
-        driveTrainSlider = new JSlider( 1, 5, 3 );
-        driveTrainSlider.setMajorTickSpacing( 1 );
-        driveTrainSlider.setPaintTicks( true );
-        ratingsPanel.add( driveTrainSlider );
-        ratingsPanel.add( new JLabel( "Driver" ) );
-        driverSlider = new JSlider( 1, 5, 3 );
-        driverSlider.setMajorTickSpacing( 1 );
-        driverSlider.setPaintTicks( true );
-        ratingsPanel.add( driverSlider );
-        matchRecordPanel.add( ratingsPanel );
-        JPanel farRightPanel = new JPanel( new BorderLayout() );
-        JPanel commentsPanel = new JPanel( new BorderLayout() );
-        commentsPanel.setBorder(
-                BorderFactory.createTitledBorder( "Comments" ) );
-        commentsArea = new JTextArea();
-        commentsPanel.add( commentsArea );
-        farRightPanel.add( commentsPanel );
-        submitMatchRecordButton = new JButton( "Done with Team" );
-        farRightPanel.add( submitMatchRecordButton, BorderLayout.SOUTH );
-        matchRecordPanel.add( farRightPanel );
-        middlePanel.add( matchRecordPanel );
-
+        emrPanel = new EnterMatchRecordPanel( controller );
+        emrPanel.setEnabled( false );
+        emrPanel.addSubmitListener( new EMRPanelSubmitListener() );
+        middlePanel.add( emrPanel.getPanel() );
         panel.add( middlePanel, BorderLayout.CENTER );
 
         submitButton = new JButton( "Save Match" );
+        Helper.setComponentFontSize( submitButton, 14 );
         submitButton.addActionListener(
                 controller.getActionListener( submitButton ) );
         panel.add( submitButton, BorderLayout.SOUTH );
@@ -168,47 +144,171 @@ public class EnterMatchView extends CritView {
      * Build a match from the information in the form fields.
      */
     public Match getMatch() {
-        AllianceColor alliance =
+        String name = matchNameField.getText();
+        AllianceColor allianceWhoWon =
                 whoWonGroup.getSelection().getActionCommand().equals(
                 "Red alliance" ) ? AllianceColor.RED : AllianceColor.BLUE;
-        MatchRecord[] recs = new MatchRecord[] { r1, r2, r3, b1, b2, b3 };
-        return new Match( alliance, coopertitionAchieved.isSelected(), recs );
+        MatchRecord[] recs = matchRecords.values()
+            .toArray( new MatchRecord[0] );
+
+        return new Match( name,
+                          allianceWhoWon,
+                          coopertitionAchievedBox.isSelected(),
+                          recs );
     }
 
     public MatchRecord getMatchRecord() {
-        return new MatchRecord( pickupSlider.getValue(),
-                                driveTrainSlider.getValue(),
-                                driverSlider.getValue(),
-                                commentsArea.getText() );
+        return emrPanel.getMatchRecord();
     }
 
     public void clearForm() {
-        //name.setText( "" );
-        //location.setText( "" );
-        //listModel.clear();
+        matchNameField.setText( "" );
+        whoWonGroup.clearSelection();
+        coopertitionAchievedBox.setSelected( false );
+        emrPanel.clearForm();
+        emrPanel.refresh();
+        emrPanel.setEnabled( false );
+        for( TeamPanel teamPanel : teamPanels ) {
+            teamPanel.clear();
+        }
+        refresh();
+    }
+
+    private enum TeamEntryStatus { READY, ENTERING, ENTERED }
+
+    private static final Map<AllianceColor,
+        Map<TeamEntryStatus, Color>> PANEL_COLOR;
+
+    static {
+        PANEL_COLOR = new HashMap<AllianceColor,
+            Map<TeamEntryStatus, Color>>();
+        Map<TeamEntryStatus, Color> red =
+            new HashMap<TeamEntryStatus, Color>();
+        red.put( TeamEntryStatus.READY, Color.RED );
+        red.put( TeamEntryStatus.ENTERING, new Color( 255, 75, 75 ) );
+        red.put( TeamEntryStatus.ENTERED, new Color( 255, 180, 180 ) );
+        PANEL_COLOR.put( AllianceColor.RED, red );
+        Map<TeamEntryStatus, Color> blue =
+            new HashMap<TeamEntryStatus, Color>();
+        blue.put( TeamEntryStatus.READY, Color.BLUE );
+        blue.put( TeamEntryStatus.ENTERING, new Color( 75, 75, 255 ) );
+        blue.put( TeamEntryStatus.ENTERED, new Color( 180, 180, 255 ) );
+        PANEL_COLOR.put( AllianceColor.BLUE, blue );
     }
 
     private class TeamPanel {
+        private TeamPosition position;
         private AllianceColor color;
-        private boolean teamEntered;
         private JPanel panel;
         private JLabel label;
         private JButton button;
 
-        public TeamPanel( AllianceColor color ) {
+        private TeamEntryStatus entryStatus = TeamEntryStatus.READY;
+
+        public TeamPanel( TeamPosition position ) {
+            this.position = position;
+            boolean red = redPositions.contains( position );
+            this.color = ( red ? AllianceColor.RED : AllianceColor.BLUE );
+
             panel = new JPanel();
-            boolean red = color == AllianceColor.RED;
-            panel.setBackground( red ? RED_NONENTERED : BLUE_NONENTERED );
             panel.setLayout( new BoxLayout( panel, BoxLayout.Y_AXIS ) );
-            label = new JLabel( "Team ????" );
-            Helper.setComponentFontSize( label, 18 );
+            label = new JLabel( "Team ?????" );
+            label.setAlignmentX( Component.CENTER_ALIGNMENT );
+            Helper.setComponentFontSize( label, 22 );
             panel.add( label );
             button = new JButton( "Enter" );
+            button.setAlignmentX( Component.CENTER_ALIGNMENT );
+            Helper.setComponentFontSize( button, 16 );
+            button.addActionListener( new EMRPanelLoadListener( this ) );
             panel.add( button );
+
+            refresh();
+        }
+
+        public void clear() {
+            setEntryStatus( TeamEntryStatus.READY );
+            refresh();
+        }
+
+        public void refresh() {
+            panel.setBackground( PANEL_COLOR.get( color ).get( entryStatus ) );
+
+            switch( entryStatus ) {
+            case READY:
+                button.setText( "Enter" );
+                button.setEnabled( selectedPosition == TeamPosition.NONE );
+                label.setText( "Team ?????" );
+                break;
+            case ENTERING:
+                button.setText( "Entering..." );
+                button.setEnabled( false );
+                Team team = emrPanel.getTeam();
+                label.setText( "Team " +
+                               ( ( team == null ) ?
+                                 "?????" :
+                                 "#" + team.getNumber() ) );
+                break;
+            case ENTERED:
+                button.setText( "Entered" );
+                button.setEnabled( false );
+                break;
+            }
+        }
+
+        public TeamEntryStatus getEntryStatus() {
+            return entryStatus;
+        }
+
+        public void setEntryStatus( TeamEntryStatus status ) {
+            entryStatus = status;
+        }
+
+        public boolean isEntered() {
+            return getEntryStatus() == TeamEntryStatus.ENTERED;
         }
 
         public JPanel getPanel() {
             return panel;
+        }
+
+        public TeamPosition getPosition() {
+            return position;
+        }
+    }
+
+    /**
+     * The listener when the "Enter" button is clicked on a TeamPanel.
+     */
+    private class EMRPanelLoadListener implements ActionListener {
+        private TeamPanel teamPanel;
+
+        public EMRPanelLoadListener( TeamPanel panel ) {
+            teamPanel = panel;
+        }
+
+        public void actionPerformed( ActionEvent event ) {
+            teamPanel.setEntryStatus( TeamEntryStatus.ENTERING );
+            selectedPosition = teamPanel.getPosition();
+            refresh();
+            emrPanel.clearForm();
+            emrPanel.setEnabled( true );
+        }
+    }
+
+    private class EMRPanelSubmitListener implements ActionListener {
+        public void actionPerformed( ActionEvent event ) {
+            for( TeamPanel p : teamPanels ) {
+                if( p.getPosition() == selectedPosition ) {
+                    p.setEntryStatus( TeamEntryStatus.ENTERED );
+                    MatchRecord record = emrPanel.getMatchRecord();
+                    matchRecords.put( p.getPosition(), record );
+                }
+                p.refresh();
+            }
+            emrPanel.clearForm();
+            emrPanel.setEnabled( false );
+            selectedPosition = TeamPosition.NONE;
+            refresh();
         }
     }
 }

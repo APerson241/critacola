@@ -8,8 +8,7 @@ import javax.swing.*;
 
 import org.rohawks.critacola.*;
 import org.rohawks.critacola.browser.*;
-import org.rohawks.critacola.util.PropertiesManager;
-import org.rohawks.critacola.util.Helper;
+import org.rohawks.critacola.util.*;
 
 /**
  * Controls the main window of the class and switching between cards.
@@ -35,9 +34,9 @@ public class MainWindow {
      */
     private void constructViews() {
         views = new HashMap<ViewType, CritView>();
-        views.put( ViewType.HOME, new HomeView( controller ) );
-        views.put( ViewType.ADD_COMPETITION, new AddCompetitionView(
+        views.put( ViewType.SELECT_COMPETITION, new SelectCompetitionView(
                 controller ) );
+        views.put( ViewType.HOME, new HomeView( controller ) );
         views.put( ViewType.ENTER_MATCH, new EnterMatchView( controller ) );
         views.put( ViewType.ENTITY_BROWSER_SEARCH, new EntityBrowser(
                 controller ) );
@@ -53,7 +52,7 @@ public class MainWindow {
         backButton.addActionListener(
                 controller.getSwitchCardListener( ViewType.HOME ) );
         topPanel.add( backButton, BorderLayout.WEST );
-        locationLabel = new JLabel( "Home" );
+        locationLabel = new JLabel( "?" );
         Helper.setComponentFontSize( locationLabel, 18 );
 
         // Add some glue on either side of the label by putting it in a JPanel
@@ -79,8 +78,8 @@ public class MainWindow {
         }
         frame.add( cardPanel, BorderLayout.CENTER );
 
-        // 809 / 500 = 1.618
-        frame.setBounds( Helper.getCenteredBounds( 809, 500 ) );
+        frame.setBounds( Helper
+                         .getCenteredBounds( Configurables.WINDOW_SIZE ) );
         frame.setDefaultCloseOperation( JFrame.EXIT_ON_CLOSE );
     }
 
@@ -112,7 +111,9 @@ public class MainWindow {
     }
 
     public void refreshCurrentView() {
-        currentView.refresh();
+        if( currentView != null ) {
+            currentView.refresh();
+        }
     }
 
     public JFrame getFrame() {

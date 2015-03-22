@@ -9,6 +9,7 @@ import javax.swing.JPanel;
 import org.rohawks.critacola.CritController;
 import org.rohawks.critacola.beans.*;
 import org.rohawks.critacola.db.*;
+import org.rohawks.critacola.util.*;
 
 /**
  * A View that's the first thing the user sees. Offers options to switch to
@@ -59,24 +60,22 @@ public class HomeView extends CritView {
 
     @Override
     protected void buildPanel() {
-        panel = new JPanel( new GridLayout( 4, 1, 10, 10 ) );
+        panel = new JPanel( new GridLayout( 3, 1, 10, 10 ) );
         panel.setBorder( BorderFactory.createEmptyBorder( 20, 20, 20, 20 ) );
         enterMatchButton = new JButton( "Enter Match" );
+        Helper.setComponentFontSize( enterMatchButton, 18 );
         enterMatchButton.addActionListener(
                 controller.getSwitchCardListener(
                 ViewType.ENTER_MATCH ) );
         panel.add( enterMatchButton );
-        JButton addCompetitionButton = new JButton( "Add Competition" );
-        addCompetitionButton.addActionListener(
-                controller.getSwitchCardListener(
-                ViewType.ADD_COMPETITION ) );
-        panel.add( addCompetitionButton );
         viewStatsButton = new JButton( "View Statistics" );
+        Helper.setComponentFontSize( viewStatsButton, 18 );
         viewStatsButton.addActionListener(
                 controller.getActionListener(
                 viewStatsButton ) );
         panel.add( viewStatsButton );
         viewDataButton = new JButton( "View Data" );
+        Helper.setComponentFontSize( viewDataButton, 18 );
         viewDataButton.addActionListener(
                 controller.getSwitchCardListener(
                 ViewType.ENTITY_BROWSER_SEARCH ) );

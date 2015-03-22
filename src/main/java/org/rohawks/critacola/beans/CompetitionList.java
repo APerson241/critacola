@@ -5,6 +5,7 @@ import java.util.*;
 
 public class CompetitionList implements Serializable {
     private List<Competition> competitions;
+    private Competition selectedCompetition;
 
     public CompetitionList() {
         competitions = new ArrayList<Competition>();
@@ -20,5 +21,20 @@ public class CompetitionList implements Serializable {
 
     public boolean isEmpty() {
         return competitions.isEmpty();
+    }
+
+    public Competition getSelectedCompetition() {
+        return selectedCompetition;
+    }
+
+    public void setSelectedCompetition( Competition c ) {
+        if( !competitions.contains( c ) ) {
+            throw new IllegalArgumentException();
+        }
+        selectedCompetition = c;
+    }
+
+    public void clearSelectedCompetition() {
+        setSelectedCompetition( null );
     }
 }

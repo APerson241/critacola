@@ -13,7 +13,6 @@ public abstract class CritView {
     public CritView( CritController controller ) {
         this.controller = controller;
         buildPanel();
-        refresh();
     }
 
     /**

@@ -3,6 +3,7 @@ package org.rohawks.critacola.util;
 import java.awt.*;
 
 import javax.swing.JComponent;
+import javax.swing.event.*;
 
 /**
  * Quite a bit of helper functions.
@@ -29,6 +30,9 @@ public abstract class Helper {
         return getCenteredBounds( new Dimension( width, height ) );
     }
 
+    /**
+     * Checks if a string is an integer. Hey, it's faster than EAFP.
+     */
     public static boolean isInteger( String str ) {
         if ( str == null ) {
             return false;
@@ -51,5 +55,26 @@ public abstract class Helper {
             }
         }
         return true;
+    }
+
+    /**
+     * From http://stackoverflow.com/a/10773412/1757964.
+     */
+    public static AncestorListener getRequestFocusListener() {
+        return new AncestorListener() {
+
+            @Override
+            public void ancestorAdded( AncestorEvent e ) {
+                JComponent component = e.getComponent();
+                component.requestFocusInWindow();
+                component.removeAncestorListener( this );
+            }
+
+            @Override
+            public void ancestorMoved( AncestorEvent e ) {}
+
+            @Override
+            public void ancestorRemoved( AncestorEvent e ) {}
+        };
     }
 }

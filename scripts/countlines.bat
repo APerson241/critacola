@@ -1,7 +1,8 @@
 @echo off
-cd ..\src
+pushd .
+cd C:\Users\John\Documents\GitHub\critacola\src
 echo There are:
 grep '' -R . | wc -l
 echo lines of code. Woohoo.
-cd ..\scripts
+popd
 echo on

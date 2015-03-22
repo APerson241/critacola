@@ -7,7 +7,19 @@ public class Team implements Serializable {
     private int number;
     private List<MatchRecord> matches;
 
-    public Team( int number ) {
+    private static Map<Integer, Team> lookup = new HashMap<Integer, Team>();
+
+    public static Team get( int num ) {
+        if( lookup.containsKey( num ) ) {
+            return lookup.get( num );
+        } else {
+            Team newTeam = new Team( num );
+            lookup.put( num, newTeam );
+            return newTeam;
+        }
+    }
+
+    private Team( int number ) {
         this.number = number;
         matches = new ArrayList<MatchRecord>();
     }

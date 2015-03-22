@@ -1,8 +1,8 @@
 package org.rohawks.critacola.ui;
 
 public enum ViewType {
+    SELECT_COMPETITION( "Select Competition" ),
     HOME( "Home" ),
-    ADD_COMPETITION( "Add Competition" ),
     ENTER_MATCH( "Enter Match" ),
     ENTITY_BROWSER_SEARCH( "Entity Browser Search" );
 

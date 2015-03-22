@@ -4,7 +4,7 @@ import java.awt.*;
 
 import javax.swing.*;
 
-import org.rohawks.critacola.beans.Competition;
+import org.rohawks.critacola.beans.*;
 
 /**
  * A factory for generating JPanels that provide a view of an entity. For
@@ -32,8 +32,12 @@ public abstract class EntityBrowserPanelFactory {
       * @return A summarizing JPanel or null if it couldn't be summarized.
       */
     public static JPanel getPanel( Object object ) {
+        System.out.println( "[getPanel] ENTERED" );
         if( object instanceof Competition ) {
             return getCompetitionPanel( (Competition) object );
+        } else if( object instanceof MatchRecord ) {
+            System.out.println( "[getPanel] YO" );
+            return getMatchRecordPanel( (MatchRecord) object );
         }
         return null;
     }
@@ -44,10 +48,19 @@ public abstract class EntityBrowserPanelFactory {
      * @param competition The competition to summarize.
      * @return A JPanel summarizing the provided competition.
      */
-    public static JPanel getCompetitionPanel( Competition competition ) {
+    private static JPanel getCompetitionPanel( Competition competition ) {
         JPanel resultPanel = new JPanel( new GridLayout( 1, 2 ) );
         resultPanel.add( new JLabel( "Name" ) );
         resultPanel.add( new JLabel( competition.getName() ) );
+        return resultPanel;
+    }
+
+    private static JPanel getMatchRecordPanel( MatchRecord record ) {
+        JPanel resultPanel = new JPanel();
+        resultPanel.setBorder( BorderFactory.createLineBorder( Color.BLACK ) );
+        System.out.println( "[getMatchRecordPanel] YO" +
+                            record.getTeam().getNumber() );
+        resultPanel.add( new JLabel( record.getTeam().getNumber() + "" ) );
         return resultPanel;
     }
 }
